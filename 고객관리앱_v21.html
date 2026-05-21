@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>보험 고객 관리 v21</title>
+<style>
+:root {
+  --primary:      #1565C0;
+  --primary-light:#E3F2FD;
+  --success:      #1B5E20;
+  --success-light:#E8F5E9;
+  --danger:       #B71C1C;
+  --danger-light: #FFEBEE;
+  --accent:       #E65100;
+  --accent-light: #FFF3E0;
+  --warn:         #F57F17;
+  --warn-light:   #FFFDE7;
+  --purple:       #4A148C;
+  --purple-light: #F3E5F5;
+  --teal:         #004D40;
+  --teal-light:   #E0F2F1;
+  --bg:           #F0F4F8;
+  --card:         #FFFFFF;
+  --border:       #E0E0E0;
+  --text1:        #212121;
+  --text2:        #424242;
+  --text3:        #757575;
+  --header-h:     56px;
+  --tab-h:        52px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text1); }
+
+/* ── 레이아웃 ── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+#header {
+  height: var(--header-h); background: var(--primary); color: #fff;
+  display: flex; align-items: center; padding: 0 16px; gap: 12px;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  flex-shrink: 0;
+}
+#header h1 { font-size: 17px; font-weight: 700; flex: 1; }
+#header-sub { font-size: 12px; opacity: .75; }
+#tab-bar {
+  height: var(--tab-h); background: #fff; display: flex;
+  border-bottom: 2px solid var(--border); flex-shrink: 0;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+#tab-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 1; min-width: 64px; border: none; background: none;
+  font-size: 12px; font-weight: 600; color: var(--text3);
+  cursor: pointer; padding: 6px 4px 4px; display: flex;
+  flex-direction: column; align-items: center; gap: 2px;
+  border-bottom: 3px solid transparent; transition: all .2s;
+  white-space: nowrap;
+}
+.tab-btn .tab-icon { font-size: 18px; }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+#main { flex: 1; overflow-y: auto; padding: 12px; padding-bottom: 24px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── 카드 ── */
+.card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+.card-title { font-size: 15px; font-weight: 700; color: var(--text1); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.card-title .icon { font-size: 16px; }
+
+/* ── 버튼 ── */
+.btn { border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; padding: 9px 16px; transition: all .15s; font-family: inherit; }
+.btn-primary   { background: var(--primary);  color: #fff; }
+.btn-secondary { background: #EEEEEE; color: var(--text2); }
+.btn-success   { background: var(--success);  color: #fff; }
+.btn-danger    { background: var(--danger);   color: #fff; }
+.btn-accent    { background: var(--accent);   color: #fff; }
+.btn-warn      { background: var(--warn);     color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-xs { padding: 4px 8px; font-size: 12px; }
+
+/* ── 입력 ── */
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+input[type=text], input[type=date], input[type=number], select, textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 12px; font-size: 15px; font-family: inherit; color: var(--text1);
+  background: #fff; outline: none; transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+textarea { resize: vertical; min-height: 70px; }
+.row { display: flex; gap: 8px; }
+.row .field { flex: 1; }
+
+/* ── 검색 ── */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-wrap input { padding-left: 36px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text3); pointer-events: none; }
+
+/* ── 고객 목록 ── */
+.customer-list { display: flex; flex-direction: column; gap: 8px; }
+.customer-card {
+  background: #fff; border-radius: 10px; padding: 12px 14px;
+  border: 2px solid transparent; cursor: pointer; transition: all .15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.customer-card:active, .customer-card.selected { border-color: var(--primary); background: var(--primary-light); }
+.customer-card-name { font-size: 16px; font-weight: 700; color: var(--text1); }
+.customer-card-sub  { font-size: 13px; color: var(--text3); margin-top: 3px; }
+.customer-card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.tag-badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+
+/* ── 이력 아이템 ── */
+.history-item {
+  border-left: 4px solid var(--primary); padding: 10px 12px;
+  background: #fff; border-radius: 0 8px 8px 0; margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.history-date  { font-size: 12px; color: var(--text3); }
+.history-type  { font-size: 13px; font-weight: 700; margin: 2px 0; }
+.history-content { font-size: 14px; color: var(--text2); }
+.history-result  { font-size: 12px; color: var(--text3); margin-top: 3px; font-style: italic; }
+
+/* ── 청구 아이템 ── */
+.claim-item {
+  border-left: 4px solid var(--accent); padding: 10px 12px;
+  background: #fff; border-radius: 0 8px 8px 0; margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.claim-status {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px; margin-bottom: 4px;
+}
+.status-접수중  { background: #FFF9C4; color: #F57F17; }
+.status-심사중  { background: #E3F2FD; color: #1565C0; }
+.status-지급완료 { background: #E8F5E9; color: #1B5E20; }
+.status-부지급  { background: #FFEBEE; color: #B71C1C; }
+.status-일부지급 { background: #FFF3E0; color: #E65100; }
+
+/* ── 통계 ── */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+.stat-card  { background: #fff; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+.stat-num   { font-size: 28px; font-weight: 800; color: var(--primary); }
+.stat-label { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.stat-card.green .stat-num { color: var(--success); }
+.stat-card.orange .stat-num { color: var(--accent); }
+.stat-card.purple .stat-num { color: var(--purple); }
+
+/* ── 타입 배지 색상 ── */
+.type-전화     { background:#E3F2FD; color:#1565C0; }
+.type-문자     { background:#E8F5E9; color:#1B5E20; }
+.type-카톡     { background:#FFFDE7; color:#F57F17; }
+.type-방문상담  { background:#F3E5F5; color:#4A148C; }
+.type-선물경조사 { background:#FFE0B2; color:#E65100; }
+.type-생일연락  { background:#FCE4EC; color:#880E4F; }
+.type-계약체결  { background:#E8F5E9; color:#1B5E20; }
+.type-계약변경해지 { background:#FFEBEE; color:#B71C1C; }
+.type-만기안내  { background:#E0F2F1; color:#004D40; }
+.type-갱신안내  { background:#E8EAF6; color:#1A237E; }
+.type-보험료변동 { background:#FFF8E1; color:#FF6F00; }
+.type-클레임접수 { background:#FCE4EC; color:#AD1457; }
+
+/* ── 모달 ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: flex-end; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 20px; max-height: 90vh; overflow-y: auto; }
+.modal-box h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.modal-actions .btn { flex: 1; }
+
+/* ── 토스트 ── */
+#toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #333; color: #fff; padding: 10px 20px; border-radius: 20px;
+  font-size: 14px; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; z-index: 999; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── 연결 배너 ── */
+#gas-banner { background: var(--warn-light); border-bottom: 1px solid var(--warn); padding: 8px 16px; font-size: 13px; color: var(--accent); display: none; }
+#gas-banner.show { display: block; }
+
+/* ── 빈 상태 ── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 10px; }
+.empty-state p { font-size: 14px; }
+
+/* ── 섹션 헤더 ── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.section-header h3 { font-size: 15px; font-weight: 700; color: var(--text1); }
+
+/* ── 필터 탭 ── */
+.filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.filter-tab { padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text3); transition: all .15s; }
+.filter-tab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+/* ── 고객 선택 표시줄 ── */
+#selected-customer-bar {
+  background: var(--primary); color: #fff; padding: 8px 16px;
+  font-size: 14px; display: none; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+#selected-customer-bar.show { display: flex; }
+#selected-customer-bar span { flex: 1; font-weight: 600; }
+
+/* ── 반응형 ── */
+@media (min-width: 480px) {
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 헤더 -->
+  <div id="header">
+    <div style="font-size:22px">📋</div>
+    <div>
+      <h1>보험 고객 관리 v21</h1>
+      <div id="header-sub" style="font-size:11px;opacity:.7">설계사 전용</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff" onclick="syncFromGAS()">☁️ 동기화</button>
+    </div>
+  </div>
+
+  <!-- GAS 미연결 배너 -->
+  <div id="gas-banner">⚠️ GAS URL이 설정되지 않았습니다. 설정 탭에서 입력해주세요.</div>
+
+  <!-- 선택된 고객 표시줄 -->
+  <div id="selected-customer-bar">
+    <span id="selected-customer-name">고객 선택 안 됨</span>
+    <button class="btn btn-xs" style="background:rgba(255,255,255,.3);color:#fff" onclick="clearSelectedCustomer()">✕ 해제</button>
+  </div>
+
+  <!-- 탭바 -->
+  <nav id="tab-bar">
+    <button class="tab-btn active" onclick="switchTab(0)"><span class="tab-icon">👥</span>고객목록</button>
+    <button class="tab-btn" onclick="switchTab(1)"><span class="tab-icon">📞</span>관리이력</button>
+    <button class="tab-btn" onclick="switchTab(2)"><span class="tab-icon">🏥</span>청구이력</button>
+    <button class="tab-btn" onclick="switchTab(3)"><span class="tab-icon">📊</span>통계</button>
+    <button class="tab-btn" onclick="switchTab(4)"><span class="tab-icon">⚙️</span>설정</button>
+  </nav>
+
+  <!-- 메인 -->
+  <div id="main">
+
+    <!-- ══ TAB 0: 고객목록 ══ -->
+    <div class="tab-panel active" id="tab-0">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="customer-search" placeholder="이름, 연락처, 생년월일 검색..." oninput="renderCustomerList()">
+      </div>
+      <div class="filter-tabs">
+        <div class="filter-tab active" data-filter="all" onclick="setCustomerFilter('all')">전체</div>
+        <div class="filter-tab" data-filter="recent" onclick="setCustomerFilter('recent')">최근 30일</div>
+        <div class="filter-tab" data-filter="birthday" onclick="setCustomerFilter('birthday')">이번 달 생일</div>
+        <div class="filter-tab" data-filter="renewal" onclick="setCustomerFilter('renewal')">갱신 예정</div>
+      </div>
+      <div id="customer-list-wrap">
+        <div class="empty-state"><div class="empty-icon">👥</div><p>동기화 버튼을 눌러 고객 데이터를 불러오세요</p></div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 1: 관리이력 ══ -->
+    <div class="tab-panel" id="tab-1">
+      <!-- 이력 입력 카드 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">➕</span> 이력 추가</div>
+        <div class="field">
+          <label>고객</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="hist-customer-name" placeholder="고객명 (선택된 고객 자동입력)" readonly style="flex:1;background:#f5f5f5">
+            <button class="btn btn-secondary btn-sm" onclick="openCustomerPickModal('history')">선택</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>날짜</label>
+            <input type="date" id="hist-date">
+          </div>
+          <div class="field">
+            <label>유형</label>
+            <select id="hist-type">
+              <option value="">선택</option>
+              <option>전화</option><option>문자</option><option>카톡</option>
+              <option>방문상담</option><option>선물·경조사</option><option>생일연락</option>
+              <option>계약체결</option><option>계약변경·해지</option>
+              <option>만기안내</option><option>갱신안내</option>
+              <option>보험료변동안내</option><option>클레임접수</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>내용</label>
+          <textarea id="hist-content" placeholder="상담 내용, 전달 사항 등"></textarea>
+        </div>
+        <div class="field">
+          <label>결과 / 다음 액션</label>
+          <input type="text" id="hist-result" placeholder="예: 다음 주 재연락, 청약서 작성 예정">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveHistory()">저장</button>
+      </div>
+
+      <!-- 이력 목록 -->
+      <div class="card">
+        <div class="section-header">
+          <h3>📋 이력 목록</h3>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="hist-search" placeholder="검색..." style="width:130px;font-size:13px;padding:5px 10px" oninput="renderHistoryList()">
+          </div>
+        </div>
+        <div class="filter-tabs" id="hist-type-filters">
+          <div class="filter-tab active" data-type="all" onclick="setHistFilter('all')">전체</div>
+          <div class="filter-tab" data-type="전화" onclick="setHistFilter('전화')">전화</div>
+          <div class="filter-tab" data-type="방문상담" onclick="setHistFilter('방문상담')">방문</div>
+          <div class="filter-tab" data-type="계약체결" onclick="setHistFilter('계약체결')">계약</div>
+          <div class="filter-tab" data-type="클레임접수" onclick="setHistFilter('클레임접수')">클레임</div>
+        </div>
+        <div id="history-list-wrap">
+          <div class="empty-state"><div class="empty-icon">📞</div><p>이력이 없습니다</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 2: 청구이력 ══ -->
+    <div class="tab-panel" id="tab-2">
+      <!-- 청구 입력 카드 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">➕</span> 청구 추가</div>
+        <div class="field">
+          <label>고객</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="claim-customer-name" placeholder="고객명 (선택된 고객 자동입력)" readonly style="flex:1;background:#f5f5f5">
+            <button class="btn btn-secondary btn-sm" onclick="openCustomerPickModal('claim')">선택</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>청구일</label>
+            <input type="date" id="claim-date">
+          </div>
+          <div class="field">
+            <label>처리상태</label>
+            <select id="claim-status">
+              <option value="">선택</option>
+              <option>접수중</option><option>심사중</option>
+              <option>지급완료</option><option>부지급</option><option>일부지급</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>보험사</label>
+            <input type="text" id="claim-company" placeholder="보험사명">
+          </div>
+          <div class="field">
+            <label>상품명</label>
+            <input type="text" id="claim-product" placeholder="상품명">
+          </div>
+        </div>
+        <div class="field">
+          <label>청구사유</label>
+          <input type="text" id="claim-reason" placeholder="예: 입원 (폐렴), 수술 (맹장)">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>청구금액</label>
+            <input type="text" id="claim-amount" placeholder="예: 500,000원">
+          </div>
+          <div class="field">
+            <label>지급금액</label>
+            <input type="text" id="claim-paid" placeholder="지급 확정 후 입력">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>지급일</label>
+            <input type="date" id="claim-paid-date">
+          </div>
+          <div class="field">
+            <label>비고</label>
+            <input type="text" id="claim-note" placeholder="특이사항">
+          </div>
+        </div>
+        <button class="btn btn-accent" style="width:100%" onclick="saveClaim()">저장</button>
+      </div>
+
+      <!-- 청구 목록 -->
+      <div class="card">
+        <div class="section-header">
+          <h3>🏥 청구 목록</h3>
+          <input type="text" id="claim-search" placeholder="검색..." style="width:130px;font-size:13px;padding:5px 10px" oninput="renderClaimList()">
+        </div>
+        <div class="filter-tabs">
+          <div class="filter-tab active" data-status="all" onclick="setClaimFilter('all')">전체</div>
+          <div class="filter-tab" data-status="접수중" onclick="setClaimFilter('접수중')">접수중</div>
+          <div class="filter-tab" data-status="심사중" onclick="setClaimFilter('심사중')">심사중</div>
+          <div class="filter-tab" data-status="지급완료" onclick="setClaimFilter('지급완료')">지급완료</div>
+          <div class="filter-tab" data-status="부지급" onclick="setClaimFilter('부지급')">부지급</div>
+        </div>
+        <div id="claim-list-wrap">
+          <div class="empty-state"><div class="empty-icon">🏥</div><p>청구이력이 없습니다</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 3: 통계 ══ -->
+    <div class="tab-panel" id="tab-3">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="stat-total-cust">0</div><div class="stat-label">전체 고객</div></div>
+        <div class="stat-card green"><div class="stat-num" id="stat-month-hist">0</div><div class="stat-label">이번 달 관리이력</div></div>
+        <div class="stat-card orange"><div class="stat-num" id="stat-pending-claim">0</div><div class="stat-label">진행중 청구</div></div>
+        <div class="stat-card purple"><div class="stat-num" id="stat-birthday">0</div><div class="stat-label">이번 달 생일</div></div>
+      </div>
+
+      <!-- 이번 달 생일 고객 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🎂</span> 이번 달 생일 고객</div>
+        <div id="stat-birthday-list">
+          <div class="empty-state"><p>이번 달 생일인 고객이 없습니다</p></div>
+        </div>
+      </div>
+
+      <!-- 진행중 청구 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">⏳</span> 진행 중인 청구</div>
+        <div id="stat-pending-list">
+          <div class="empty-state"><p>진행 중인 청구가 없습니다</p></div>
+        </div>
+      </div>
+
+      <!-- 최근 30일 관리이력 요약 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📈</span> 최근 30일 이력 유형별</div>
+        <div id="stat-hist-chart"></div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 4: 설정 ══ -->
+    <div class="tab-panel" id="tab-4">
+      <div class="card">
+        <div class="card-title"><span class="icon">☁️</span> 구글 시트 연동 설정</div>
+        <div class="field">
+          <label>GAS Web App URL</label>
+          <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveGasUrl()">저장</button>
+          <button class="btn btn-secondary btn-sm" onclick="testConnection()">연결 테스트</button>
+          <button class="btn btn-success btn-sm" onclick="syncFromGAS()">☁️ 시트에서 불러오기</button>
+          <button class="btn btn-accent btn-sm" onclick="pushToGAS()">📤 시트로 보내기</button>
+        </div>
+        <div id="gas-test-result" style="margin-top:10px;font-size:14px;display:none"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🗂️</span> 데이터 관리</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="exportJSON()">📥 JSON 내보내기</button>
+          <button class="btn btn-secondary btn-sm" onclick="importJSON()">📤 JSON 가져오기</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImportJSON(event)">
+        </div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text3)">
+          <div>• 관리이력: <span id="info-hist-count">0</span>건</div>
+          <div>• 청구이력: <span id="info-claim-count">0</span>건</div>
+          <div>• 마지막 동기화: <span id="info-last-sync">없음</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">ℹ️</span> 앱 안내</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.8">
+          <div>• 상담앱(insurance_app.html)과 <strong>동일한 GAS URL</strong>을 사용합니다</div>
+          <div>• 구글 시트에서 관리이력·청구이력은 직접 수정도 가능합니다</div>
+          <div>• 고객 정보는 상담앱에서 관리하고, 이 앱은 이력·청구 관리 전용입니다</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- 토스트 -->
+<div id="toast"></div>
+
+<!-- 고객 선택 모달 -->
+<div class="modal-overlay" id="customer-pick-modal">
+  <div class="modal-box">
+    <h2>고객 선택</h2>
+    <div class="search-wrap" style="margin-bottom:10px">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="pick-search" placeholder="이름 검색..." oninput="renderPickList()">
+    </div>
+    <div id="pick-list" style="max-height:300px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('customer-pick-modal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// 상수 & 초기화
+// ══════════════════════════════════════════
+const STORAGE_KEY    = 'insurance_v2_data';   // 상담앱과 동일 키
+const MANAGER_KEY    = 'insurance_mgr_data';  // 관리앱 전용 (이력/청구)
+const TODAY = new Date().toISOString().split('T')[0];
+
+let sharedData  = { customers: {}, gasUrl: '' }; // 상담앱 공유 데이터
+let managerData = { history: [], claims: [], lastSync: null }; // 관리앱 전용
+let currentPickTarget = ''; // 'history' | 'claim'
+let selectedCustomerId = null;
+let customerFilter = 'all';
+let histFilter = 'all';
+let claimFilter = 'all';
+
+// ── 초기화 ──
+window.addEventListener('DOMContentLoaded', () => {
+  loadLocalData();
+  document.getElementById('hist-date').value  = TODAY;
+  document.getElementById('claim-date').value = TODAY;
+  updateWarningBanner();
+  renderAll();
+});
+
+function loadLocalData() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) sharedData = JSON.parse(s);
+  } catch(e) {}
+  try {
+    const m = localStorage.getItem(MANAGER_KEY);
+    if (m) managerData = JSON.parse(m);
+  } catch(e) {}
+}
+
+function saveManagerData() {
+  localStorage.setItem(MANAGER_KEY, JSON.stringify(managerData));
+  updateInfoCounts();
+}
+
+function updateInfoCounts() {
+  document.getElementById('info-hist-count').textContent  = managerData.history.length;
+  document.getElementById('info-claim-count').textContent = managerData.claims.length;
+  const ls = managerData.lastSync;
+  document.getElementById('info-last-sync').textContent = ls
+    ? new Date(ls).toLocaleString('ko-KR') : '없음';
+}
+
+// ══════════════════════════════════════════
+// 탭 전환
+// ══════════════════════════════════════════
+function switchTab(idx) {
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  if (idx === 3) renderStats();
+}
+
+// ══════════════════════════════════════════
+// 고객 선택
+// ══════════════════════════════════════════
+function setSelectedCustomer(id) {
+  selectedCustomerId = id;
+  const cust = sharedData.customers[id];
+  if (!cust) return;
+  const bar = document.getElementById('selected-customer-bar');
+  bar.classList.add('show');
+  document.getElementById('selected-customer-name').textContent = `📌 ${cust.name}`;
+  // 입력란 자동 채우기
+  document.getElementById('hist-customer-name').value  = cust.name;
+  document.getElementById('claim-customer-name').value = cust.name;
+  document.getElementById('hist-customer-name').dataset.id  = id;
+  document.getElementById('claim-customer-name').dataset.id = id;
+}
+
+function clearSelectedCustomer() {
+  selectedCustomerId = null;
+  document.getElementById('selected-customer-bar').classList.remove('show');
+  document.getElementById('hist-customer-name').value  = '';
+  document.getElementById('claim-customer-name').value = '';
+  document.getElementById('hist-customer-name').dataset.id  = '';
+  document.getElementById('claim-customer-name').dataset.id = '';
+}
+
+// ══════════════════════════════════════════
+// 고객 목록 렌더링
+// ══════════════════════════════════════════
+function setCustomerFilter(f) {
+  customerFilter = f;
+  document.querySelectorAll('#tab-0 .filter-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
+  renderCustomerList();
+}
+
+function renderCustomerList() {
+  const wrap = document.getElementById('customer-list-wrap');
+  const q    = (document.getElementById('customer-search').value || '').toLowerCase();
+  const now  = new Date();
+  const thisMonth = now.getMonth() + 1;
+
+  let custs = Object.values(sharedData.customers || {});
+
+  // 필터
+  if (customerFilter === 'recent') {
+    const cutoff = new Date(now - 30 * 86400000);
+    custs = custs.filter(c => c.updatedAt && new Date(c.updatedAt) >= cutoff);
+  } else if (customerFilter === 'birthday') {
+    custs = custs.filter(c => {
+      const b = (c.tab1||{}).birth||{};
+      return parseInt(b.M) === thisMonth;
+    });
+  }
+
+  // 검색
+  if (q) {
+    custs = custs.filter(c => {
+      const t1 = c.tab1||{};
+      return (c.name||'').toLowerCase().includes(q) ||
+             (t1.phone||'').includes(q) ||
+             String((t1.birth||{}).Y||'').includes(q);
+    });
+  }
+
+  // 정렬: 최근 수정순
+  custs.sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+
+  if (!custs.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><p>조건에 맞는 고객이 없습니다</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="customer-list">${custs.map(c => {
+    const t1 = c.tab1||{};
+    const b  = t1.birth||{};
+    const birthStr = b.Y ? `${b.Y}년생` : '';
+    const imported = c.importedContracts;
+    const importCnt = imported ? (imported.실손건수||0)+(imported.정액건수||0) : 0;
+    const manualCnt = (c.contracts||[]).length;
+    const isSelected = c.id === selectedCustomerId;
+
+    // 이번 달 이력 수
+    const histCount = (managerData.history||[]).filter(h =>
+      h.customerId === c.id &&
+      h.date && h.date.startsWith(now.toISOString().slice(0,7))
+    ).length;
+
+    // 주민번호 마스킹 (앞 6자리만 표시)
+    const regNo = t1.regNo || '';
+    const regNoMasked = regNo.length >= 6
+      ? regNo.substring(0, 6) + '-●●●●●●'
+      : '';
+    // 주소 시/구 수준으로 축약
+    const addrShort = t1.address
+      ? t1.address.split(' ').slice(0,2).join(' ')
+      : '';
+    // 마지막 상담일
+    const lastContact = c.updatedAt ? c.updatedAt.substring(0,10) : '';
+    // 총 월보험료 (S보장분석)
+    const totalFee = c.importedContracts?.총월보험료 || 0;
+
+    // 실손 정보 추출 — 의료비 구분만 사용 (운전자·배상책임 제외)
+    const realossImported = c.importedContracts;
+    const realossItems = realossImported ? (realossImported.실손 || []) : [];
+    const medicalItems = realossItems.filter(r => r.구분 === '의료비');
+    let realossInfo = '';
+    if (medicalItems.length > 0) {
+      const starts = medicalItems.map(r => r.보험기간시작).filter(Boolean).sort();
+      const realossStart = starts[0] || '';
+      const realossCo = medicalItems[0]?.회사 || '';
+      // 세대 추정 + 재가입일 — 공통 함수 사용 (v21)
+      const genKey = _estimateRealossGen(realossStart);
+      const genName = { gen1:'1세대(구실손)', gen2:'2세대(표준화)', gen3:'3세대(착한실손)', gen4:'4세대', gen5:'5세대' }[genKey] || '';
+      const rejoinDate = _calcRejoinDate(realossStart, genKey);
+      const rejoinLeft = _calcRejoinLeft(rejoinDate);
+      const rejoinStr = rejoinDate ? ` · 재가입 ${rejoinDate} (${rejoinLeft})` : '';
+      realossInfo = `${genName} · ${realossCo} · ${realossStart} 가입${rejoinStr}`;
+    }
+
+    return `<div class="customer-card${isSelected?' selected':''}" onclick="setSelectedCustomer('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="customer-card-name">${c.name||'이름없음'}</div>
+        ${isSelected ? '<span style="font-size:12px;color:var(--primary);font-weight:700">✓ 선택됨</span>' : ''}
+      </div>
+      ${regNoMasked ? `<div style="font-size:13px;color:var(--text2);font-family:monospace;margin-top:2px">${regNoMasked}</div>` : ''}
+      <div class="customer-card-sub" style="margin-top:3px">
+        ${birthStr}${t1.gender?' · '+t1.gender:''}${t1.phone?' · '+t1.phone:''}
+      </div>
+      ${addrShort ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📍 ${addrShort}</div>` : ''}
+      ${realossInfo ? `<div style="font-size:12px;color:#1565C0;margin-top:3px">🏥 ${realossInfo}</div>` : ''}
+      <div class="customer-card-tags" style="margin-top:6px">
+        ${manualCnt ? `<span class="tag-badge" style="background:var(--primary-light);color:var(--primary)">수동 ${manualCnt}건</span>` : ''}
+        ${importCnt ? `<span class="tag-badge" style="background:var(--success-light);color:var(--success)">사전조회 ${importCnt}건</span>` : ''}
+        ${totalFee ? `<span class="tag-badge" style="background:#F3E5F5;color:#4A148C">월 ${totalFee.toLocaleString()}원</span>` : ''}
+        ${histCount ? `<span class="tag-badge" style="background:var(--warn-light);color:var(--warn)">이달 이력 ${histCount}건</span>` : ''}
+        ${lastContact ? `<span class="tag-badge" style="background:#F5F5F5;color:var(--text3)">최근 ${lastContact}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ══════════════════════════════════════════
+// 관리이력 저장 / 렌더링
+// ══════════════════════════════════════════
+function saveHistory() {
+  const custId   = document.getElementById('hist-customer-name').dataset.id || '';
+  const custName = document.getElementById('hist-customer-name').value.trim();
+  const date     = document.getElementById('hist-date').value;
+  const type     = document.getElementById('hist-type').value;
+  const content  = document.getElementById('hist-content').value.trim();
+  const result   = document.getElementById('hist-result').value.trim();
+
+  if (!custName) { showToast('❌ 고객을 선택해주세요'); return; }
+  if (!date)     { showToast('❌ 날짜를 입력해주세요'); return; }
+  if (!type)     { showToast('❌ 유형을 선택해주세요'); return; }
+  if (!content)  { showToast('❌ 내용을 입력해주세요'); return; }
+
+  const entry = {
+    id: 'h_' + Date.now(),
+    customerId: custId,
+    customerName: custName,
+    date, type, content, result,
+    createdAt: new Date().toISOString()
+  };
+
+  managerData.history.unshift(entry);
+  saveManagerData();
+  pushHistoryToGAS(entry);
+
+  // 입력란 초기화 (고객, 날짜 유지)
+  document.getElementById('hist-type').value    = '';
+  document.getElementById('hist-content').value = '';
+  document.getElementById('hist-result').value  = '';
+  renderHistoryList();
+  showToast('✅ 이력이 저장됐습니다');
+}
+
+function setHistFilter(f) {
+  histFilter = f;
+  document.querySelectorAll('#hist-type-filters .filter-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.type === f));
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const wrap = document.getElementById('history-list-wrap');
+  const q    = (document.getElementById('hist-search').value||'').toLowerCase();
+  let items  = [...(managerData.history||[])];
+
+  if (histFilter !== 'all') items = items.filter(h => h.type === histFilter);
+  if (selectedCustomerId)   items = items.filter(h => h.customerId === selectedCustomerId);
+  if (q) items = items.filter(h =>
+    (h.customerName||'').toLowerCase().includes(q) ||
+    (h.content||'').toLowerCase().includes(q) ||
+    (h.type||'').includes(q));
+
+  items.sort((a,b) => b.date.localeCompare(a.date));
+
+  if (!items.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📞</div><p>이력이 없습니다</p></div>`;
+    return;
+  }
+
+  const typeClass = t => 'type-' + t.replace(/[·\s]/g,'');
+
+  wrap.innerHTML = items.map(h => `
+    <div class="history-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="history-date">${h.date} · <strong>${h.customerName||''}</strong></div>
+          <span class="tag-badge ${typeClass(h.type)}" style="margin:3px 0;display:inline-block">${h.type}</span>
+          <div class="history-content">${h.content||''}</div>
+          ${h.result ? `<div class="history-result">→ ${h.result}</div>` : ''}
+        </div>
+        <button class="btn btn-xs" style="background:var(--danger-light);color:var(--danger);margin-left:8px;flex-shrink:0" onclick="deleteHistory('${h.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function deleteHistory(id) {
+  if (!confirm('이 이력을 삭제하시겠습니까?')) return;
+  managerData.history = managerData.history.filter(h => h.id !== id);
+  saveManagerData();
+  renderHistoryList();
+  showToast('삭제됐습니다');
+}
+
+// ══════════════════════════════════════════
+// 청구이력 저장 / 렌더링
+// ══════════════════════════════════════════
+function saveClaim() {
+  const custId   = document.getElementById('claim-customer-name').dataset.id || '';
+  const custName = document.getElementById('claim-customer-name').value.trim();
+  const date     = document.getElementById('claim-date').value;
+  const status   = document.getElementById('claim-status').value;
+  const company  = document.getElementById('claim-company').value.trim();
+  const product  = document.getElementById('claim-product').value.trim();
+  const reason   = document.getElementById('claim-reason').value.trim();
+  const amount   = document.getElementById('claim-amount').value.trim();
+  const paid     = document.getElementById('claim-paid').value.trim();
+  const paidDate = document.getElementById('claim-paid-date').value;
+  const note     = document.getElementById('claim-note').value.trim();
+
+  if (!custName) { showToast('❌ 고객을 선택해주세요'); return; }
+  if (!date)     { showToast('❌ 청구일을 입력해주세요'); return; }
+  if (!status)   { showToast('❌ 처리상태를 선택해주세요'); return; }
+
+  const entry = {
+    id: 'c_' + Date.now(),
+    customerId: custId, customerName: custName,
+    date, status, company, product, reason,
+    amount, paid, paidDate, note,
+    createdAt: new Date().toISOString()
+  };
+
+  managerData.claims.unshift(entry);
+  saveManagerData();
+  pushClaimToGAS(entry);
+
+  // 초기화 (고객·날짜 유지)
+  ['claim-status','claim-company','claim-product','claim-reason',
+   'claim-amount','claim-paid','claim-paid-date','claim-note']
+    .forEach(id => document.getElementById(id).value = '');
+  renderClaimList();
+  showToast('✅ 청구이력이 저장됐습니다');
+}
+
+function setClaimFilter(f) {
+  claimFilter = f;
+  document.querySelectorAll('#tab-2 .filter-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.status === f));
+  renderClaimList();
+}
+
+function renderClaimList() {
+  const wrap = document.getElementById('claim-list-wrap');
+  const q    = (document.getElementById('claim-search').value||'').toLowerCase();
+  let items  = [...(managerData.claims||[])];
+
+  if (claimFilter !== 'all') items = items.filter(c => c.status === claimFilter);
+  if (selectedCustomerId)    items = items.filter(c => c.customerId === selectedCustomerId);
+  if (q) items = items.filter(c =>
+    (c.customerName||'').toLowerCase().includes(q) ||
+    (c.company||'').includes(q) ||
+    (c.reason||'').toLowerCase().includes(q));
+
+  items.sort((a,b) => b.date.localeCompare(a.date));
+
+  if (!items.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🏥</div><p>청구이력이 없습니다</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = items.map(c => `
+    <div class="claim-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <span class="claim-status status-${c.status.replace(/\s/g,'')}">${c.status}</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text1)">${c.customerName||''} · ${c.company||''} · ${c.product||''}</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:2px">${c.reason||''}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">
+            청구일: ${c.date}
+            ${c.amount ? ' · 청구: '+c.amount : ''}
+            ${c.paid ? ' · 지급: '+c.paid : ''}
+            ${c.paidDate ? ' · 지급일: '+c.paidDate : ''}
+          </div>
+          ${c.note ? `<div style="font-size:12px;color:var(--text3);font-style:italic">${c.note}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-left:8px;flex-shrink:0">
+          <button class="btn btn-xs btn-secondary" onclick="openEditClaim('${c.id}')">수정</button>
+          <button class="btn btn-xs" style="background:var(--danger-light);color:var(--danger)" onclick="deleteClaim('${c.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function deleteClaim(id) {
+  if (!confirm('이 청구이력을 삭제하시겠습니까?')) return;
+  managerData.claims = managerData.claims.filter(c => c.id !== id);
+  saveManagerData();
+  renderClaimList();
+  showToast('삭제됐습니다');
+}
+
+function openEditClaim(id) {
+  const c = managerData.claims.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('claim-customer-name').value = c.customerName;
+  document.getElementById('claim-customer-name').dataset.id = c.customerId;
+  document.getElementById('claim-date').value    = c.date;
+  document.getElementById('claim-status').value  = c.status;
+  document.getElementById('claim-company').value = c.company;
+  document.getElementById('claim-product').value = c.product;
+  document.getElementById('claim-reason').value  = c.reason;
+  document.getElementById('claim-amount').value  = c.amount;
+  document.getElementById('claim-paid').value    = c.paid;
+  document.getElementById('claim-paid-date').value = c.paidDate;
+  document.getElementById('claim-note').value    = c.note;
+  // 기존 삭제 후 재저장
+  managerData.claims = managerData.claims.filter(x => x.id !== id);
+  switchTab(2);
+  document.getElementById('main').scrollTop = 0;
+  showToast('내용을 수정 후 저장 버튼을 눌러주세요');
+}
+
+// ══════════════════════════════════════════
+// 통계
+// ══════════════════════════════════════════
+function renderStats() {
+  const now = new Date();
+  const thisMonth = now.toISOString().slice(0,7);
+  const custs = Object.values(sharedData.customers||{});
+
+  // 기본 통계
+  document.getElementById('stat-total-cust').textContent = custs.length;
+
+  const monthHist = (managerData.history||[]).filter(h => h.date && h.date.startsWith(thisMonth));
+  document.getElementById('stat-month-hist').textContent = monthHist.length;
+
+  const pendingClaims = (managerData.claims||[]).filter(c => ['접수중','심사중'].includes(c.status));
+  document.getElementById('stat-pending-claim').textContent = pendingClaims.length;
+
+  // 생일
+  const birthCusts = custs.filter(c => parseInt(((c.tab1||{}).birth||{}).M) === now.getMonth()+1);
+  document.getElementById('stat-birthday').textContent = birthCusts.length;
+
+  // 생일 목록
+  const bList = document.getElementById('stat-birthday-list');
+  bList.innerHTML = birthCusts.length ? birthCusts.map(c => {
+    const b = ((c.tab1||{}).birth||{});
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px">🎂</span>
+      <div>
+        <div style="font-weight:700">${c.name}</div>
+        <div style="font-size:13px;color:var(--text3)">${b.Y||''}년 ${b.M||''}월 ${b.D||''}일</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" style="margin-left:auto" onclick="prefillHistory('${c.id}','${c.name}','생일연락')">이력추가</button>
+    </div>`;
+  }).join('') : '<div class="empty-state"><p>이번 달 생일인 고객이 없습니다</p></div>';
+
+  // 진행중 청구
+  const pList = document.getElementById('stat-pending-list');
+  pList.innerHTML = pendingClaims.length ? pendingClaims.map(c => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span class="claim-status status-${c.status.replace(/\s/g,'')}">${c.status}</span>
+      <div>
+        <div style="font-weight:700">${c.customerName}</div>
+        <div style="font-size:13px;color:var(--text3)">${c.company} · ${c.reason}</div>
+      </div>
+    </div>`).join('') : '<div class="empty-state"><p>진행 중인 청구가 없습니다</p></div>';
+
+  // 유형별 이력 차트 (30일)
+  const cutoff = new Date(now - 30*86400000).toISOString().split('T')[0];
+  const recent = (managerData.history||[]).filter(h => h.date >= cutoff);
+  const typeCounts = {};
+  recent.forEach(h => { typeCounts[h.type] = (typeCounts[h.type]||0)+1; });
+  const chartEl = document.getElementById('stat-hist-chart');
+  const maxCnt = Math.max(...Object.values(typeCounts), 1);
+  chartEl.innerHTML = Object.entries(typeCounts)
+    .sort((a,b) => b[1]-a[1])
+    .map(([type, cnt]) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="width:80px;font-size:13px;text-align:right;flex-shrink:0">${type}</div>
+        <div style="flex:1;background:var(--bg);border-radius:4px;height:22px;overflow:hidden">
+          <div style="height:100%;background:var(--primary);border-radius:4px;width:${(cnt/maxCnt*100).toFixed(0)}%;transition:width .4s;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">
+            <span style="font-size:12px;color:#fff;font-weight:700">${cnt}</span>
+          </div>
+        </div>
+      </div>`).join('') || '<div class="empty-state"><p>최근 30일 이력이 없습니다</p></div>';
+}
+
+function prefillHistory(id, name, type) {
+  switchTab(1);
+  document.getElementById('hist-customer-name').value = name;
+  document.getElementById('hist-customer-name').dataset.id = id;
+  document.getElementById('hist-type').value = type;
+  document.getElementById('hist-date').value = TODAY;
+  document.getElementById('main').scrollTop = 0;
+}
+
+// ══════════════════════════════════════════
+// 고객 선택 모달
+// ══════════════════════════════════════════
+function openCustomerPickModal(target) {
+  currentPickTarget = target;
+  document.getElementById('pick-search').value = '';
+  renderPickList();
+  document.getElementById('customer-pick-modal').classList.add('open');
+}
+
+function renderPickList() {
+  const q = (document.getElementById('pick-search').value||'').toLowerCase();
+  let custs = Object.values(sharedData.customers||{});
+  if (q) custs = custs.filter(c => (c.name||'').toLowerCase().includes(q));
+  custs.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+
+  document.getElementById('pick-list').innerHTML = custs.length
+    ? custs.map(c => `<div class="customer-card" style="margin-bottom:6px" onclick="pickCustomer('${c.id}','${(c.name||'').replace(/'/g,"\\'")}')">
+        <div class="customer-card-name">${c.name||'이름없음'}</div>
+        <div class="customer-card-sub">${((c.tab1||{}).phone||'')}</div>
+      </div>`).join('')
+    : '<div class="empty-state"><p>고객이 없습니다. 상담앱에서 동기화해주세요.</p></div>';
+}
+
+function pickCustomer(id, name) {
+  if (currentPickTarget === 'history') {
+    document.getElementById('hist-customer-name').value = name;
+    document.getElementById('hist-customer-name').dataset.id = id;
+  } else {
+    document.getElementById('claim-customer-name').value = name;
+    document.getElementById('claim-customer-name').dataset.id = id;
+  }
+  closeModal('customer-pick-modal');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ══════════════════════════════════════════
+// GAS 연동
+// ══════════════════════════════════════════
+function updateWarningBanner() {
+  const banner = document.getElementById('gas-banner');
+  banner.classList.toggle('show', !sharedData.gasUrl);
+}
+
+function saveGasUrl() {
+  sharedData.gasUrl = document.getElementById('gas-url-input').value.trim();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData));
+  updateWarningBanner();
+  showToast('✅ GAS URL 저장 완료');
+}
+
+async function testConnection() {
+  const url = sharedData.gasUrl;
+  const res = document.getElementById('gas-test-result');
+  res.style.display = 'block';
+  if (!url) { res.textContent = '❌ GAS URL을 먼저 입력하세요'; return; }
+  res.textContent = '연결 테스트 중...';
+  try {
+    const r = await fetch(url + '?action=test');
+    const d = await r.json();
+    res.textContent = d.success ? '✅ 연결 성공!' : '❌ 연결 실패: ' + d.message;
+  } catch(e) {
+    res.textContent = '❌ 연결 실패: ' + e.message;
+  }
+}
+
+async function syncFromGAS() {
+  const url = sharedData.gasUrl;
+  if (!url) { showToast('❌ GAS URL을 먼저 설정해주세요'); switchTab(4); return; }
+  showToast('☁️ 동기화 중...');
+  try {
+    const r = await fetch(url + '?action=load');
+    const d = await r.json();
+    if (!d.success) { showToast('❌ 불러오기 실패: ' + d.message); return; }
+    const loaded = d.customers || {};
+    Object.entries(loaded).forEach(([id, c]) => {
+      const local = sharedData.customers[id];
+      if (!local || new Date(c.updatedAt||0) >= new Date(local.updatedAt||0)) {
+        sharedData.customers[id] = c;
+      }
+    });
+    sharedData.gasUrl = sharedData.gasUrl || url;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData));
+    managerData.lastSync = new Date().toISOString();
+    saveManagerData();
+    renderAll();
+    showToast(`✅ ${Object.keys(loaded).length}명 동기화 완료`);
+  } catch(e) {
+    showToast('❌ 동기화 실패: ' + e.message);
+  }
+}
+
+async function pushToGAS() {
+  const url = sharedData.gasUrl;
+  if (!url) { showToast('❌ GAS URL을 먼저 설정해주세요'); return; }
+  showToast('📤 전송 중...');
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'save', data: sharedData }),
+    });
+    showToast('✅ 구글 시트로 전송 완료');
+  } catch(e) {
+    showToast('❌ 전송 실패: ' + e.message);
+  }
+}
+
+// 이력 단건 GAS 전송 (구글 시트 관리이력 행 추가)
+async function pushHistoryToGAS(entry) {
+  const url = sharedData.gasUrl;
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'addHistory', data: entry }),
+    });
+  } catch(e) {}
+}
+
+// 청구 단건 GAS 전송
+async function pushClaimToGAS(entry) {
+  const url = sharedData.gasUrl;
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'addClaim', data: entry }),
+    });
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════
+// 데이터 내보내기/가져오기
+// ══════════════════════════════════════════
+function exportJSON() {
+  const blob = new Blob([JSON.stringify({ sharedData, managerData }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `insurance_manager_backup_${TODAY}.json`;
+  a.click();
+}
+
+function importJSON() {
+  document.getElementById('import-file').click();
+}
+
+function handleImportJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.sharedData)  { sharedData  = d.sharedData;  localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData)); }
+      if (d.managerData) { managerData = d.managerData; saveManagerData(); }
+      renderAll();
+      showToast('✅ 가져오기 완료');
+    } catch(err) {
+      showToast('❌ 파일 오류: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ══════════════════════════════════════════
+// 유틸
+// ══════════════════════════════════════════
+function renderAll() {
+  renderCustomerList();
+  renderHistoryList();
+  renderClaimList();
+  updateInfoCounts();
+  // 설정탭 URL 표시
+  if (sharedData.gasUrl) document.getElementById('gas-url-input').value = sharedData.gasUrl;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── 실손 공통 유틸 (v21) — 상담매니저와 동일 로직 유지
+// ※ 세대 커트라인 변경 시 이 블록만 수정할 것
+function _estimateRealossGen(dateStr) {
+  if (!dateStr) return '';
+  const [y, m] = dateStr.split('.').map(Number);
+  if (!y) return '';
+  const ym = y * 100 + (m || 1);
+  if (ym <= 200907) return 'gen1';
+  if (ym <= 201703) return 'gen2';
+  if (ym <= 202106) return 'gen3';
+  if (ym <= 202505) return 'gen4';   // 4세대 (2026.05.05 종료)
+  return 'gen5';                     // 5세대 (2026.05.06 출시)
+}
+function _calcRejoinDate(dateStr, genKey) {
+  if (!dateStr || !genKey) return '';
+  const [y, m] = dateStr.split('.').map(Number);
+  if (!y) return '';
+  if (genKey === 'gen2' || genKey === 'gen3') return `${y + 15}.${String(m||1).padStart(2,'0')}`;
+  if (genKey === 'gen4' || genKey === 'gen5') return `${y + 5}.${String(m||1).padStart(2,'0')}`;
+  return '';
+}
+function _calcRejoinLeft(rejoinDate) {
+  if (!rejoinDate) return '';
+  const [ry, rm] = rejoinDate.split('.').map(Number);
+  const now = new Date();
+  const months = (ry - now.getFullYear()) * 12 + (rm - (now.getMonth() + 1));
+  if (months <= 0) return '재가입 시기 도래';
+  const y = Math.floor(months / 12), mo = months % 12;
+  return (y > 0 ? `${y}년 ` : '') + (mo > 0 ? `${mo}개월 ` : '') + '남음';
+}
+</script>
+</body>
+</html>
