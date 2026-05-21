@@ -1,7 +1,7 @@
 {
   "name": "보험 상담 매니저",
   "short_name": "보험매니저",
-  "start_url": "./보험상담매니저_v21.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f6f9",
   "theme_color": "#1a5fb4",
